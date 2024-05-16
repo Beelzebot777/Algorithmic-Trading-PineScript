@@ -1,0 +1,80 @@
+//@version=5
+strategy("Hammers and Stochastic Strategy", overlay=true, initial_capital=10000, commission_type=strategy.commission.percent, commission_value=0.01, pyramiding=20)
+
+// Parámetros para el estocástico
+k_period = input(14, title="K Period")
+d_period = input(3, title="D Period")
+smooth_k = input(3, title="Smooth K")
+overbought = input(80, title="Overbought Level")
+oversold = input(20, title="Oversold Level")
+
+// Calcular el estocástico
+k = ta.sma(ta.stoch(close, high, low, k_period), smooth_k)
+d = ta.sma(k, d_period)
+
+// Función para detectar velas Hammer
+isHammer = (close > open) and ((high - low) > 3 * (close - open)) and ((close - open) <= (0.3 * (high - low))) and ((open - low) >= 0.5 * (high - low))
+
+// Función para detectar velas Martillo Invertido
+isInvertedHammer = (open > close) and ((high - low) > 3 * (open - close)) and ((open - close) <= (0.3 * (high - low))) and ((high - close) >= 0.5 * (high - low))
+
+// Configuración del size de compra
+currentPrice = close
+amount_to_invest = 500
+qty_to_buy = amount_to_invest / currentPrice
+
+// Configuración de operaciones
+allowLongs = true
+allowShorts = true
+start_date = timestamp("2024-05-15 12:00 +0000")
+end_date = timestamp("2024-12-01 12:00 +0000")
+
+// Verifica si el tiempo actual está dentro del rango especificado
+time_filter = (time >= start_date) and (time <= end_date)
+
+// Condiciones de entrada y salida
+longCondition = isHammer and (k < oversold) and time_filter
+shortCondition = isInvertedHammer and (k > overbought) and time_filter
+exitLongCondition = (k > overbought) and time_filter
+exitShortCondition = (k < oversold) and time_filter
+
+// Función para formatear la fecha y hora
+getTimeString() =>
+    yearStr = str.tostring(year(time))
+    monthStr = str.tostring(month(time))
+    dayStr = str.tostring(dayofmonth(time))
+    hourStr = str.tostring(hour(time))
+    minuteStr = str.tostring(minute(time))
+    secondStr = str.tostring(second(time))
+    hourStr + ":" + minuteStr + ":" + secondStr + "_" + dayStr + "/" + monthStr + "/" + yearStr
+
+// Ejecutar la estrategia y generar alertas
+if allowLongs and longCondition
+    strategy.entry("Long", strategy.long, qty=qty_to_buy)
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Quantity": "' + str.tostring(qty_to_buy) + '", "Entry Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Open Long", "Strategy": "Hammer and Stochastic Strategy"}', alert.freq_once_per_bar)
+
+if allowLongs and exitLongCondition
+    strategy.close("Long")
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Exit Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Close Long", "Strategy": "Hammer and Stochastic Strategy"}', alert.freq_once_per_bar)
+
+if allowShorts and shortCondition
+    strategy.entry("Short", strategy.short, qty=qty_to_buy)
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Quantity": "' + str.tostring(qty_to_buy) + '", "Entry Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Open Short", "Strategy": "Hammer and Stochastic Strategy"}', alert.freq_once_per_bar)
+
+if allowShorts and exitShortCondition
+    strategy.close("Short")
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Exit Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Close Short", "Strategy": "Hammer and Stochastic Strategy"}', alert.freq_once_per_bar)
+
+// Plot para visualizar el estocástico y las velas Hammer
+plot(k, title="Stochastic K", color=color.blue)
+plot(d, title="Stochastic D", color=color.orange)
+hline(overbought, "Overbought", color=color.red, linestyle=hline.style_dotted)
+hline(oversold, "Oversold", color=color.green, linestyle=hline.style_dotted)
+
+// Marcar las velas Hammer y Martillo Invertido en el gráfico
+plotshape(series=isHammer, location=location.belowbar, color=color.green, style=shape.labelup, text="Hammer")
+plotshape(series=isInvertedHammer, location=location.abovebar, color=color.red, style=shape.labeldown, text="Inv Hammer")
+
+// Destacar la fecha de inicio
+start_date_highlight = (time == start_date)
+bgcolor(start_date_highlight ? color.new(color.white, 20) : na, title="Start Date Highlight")
