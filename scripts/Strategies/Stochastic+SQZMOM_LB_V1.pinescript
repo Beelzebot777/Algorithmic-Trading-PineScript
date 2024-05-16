@@ -1,0 +1,121 @@
+//@version=5
+strategy("Stochastic+SQZMOM_LB_v1",
+         overlay=true,
+         initial_capital=10000, // Establece el capital inicial X unidades de la divisa de tu cuenta
+         commission_type="percent", // Tipo de comisión como porcentaje
+         pyramiding=10, // Esto permite hacer entradas adicionales en la misma dirección mientras una posición está abierta. 
+         commission_value=0.01) // Comisión del 0.01% por orden
+
+// Configuracion del size de compra
+currentPrice = close // El precio actual del activo
+amount_to_invest = 500 
+qty_to_buy = amount_to_invest / currentPrice // Calcula la cantidad a comprar con 'amount_to_invest'
+
+// EMAs
+longEmaPeriod_B = 200
+longEmaPeriod = 55
+shortEmaPeriod = 10
+longEma = ta.ema(close, longEmaPeriod)
+shortEma = ta.ema(close, shortEmaPeriod)
+longEma_B = ta.ema(close, longEmaPeriod_B)
+plot(longEma_B, color=color.rgb(255, 0, 0), title="EMA 200", linewidth=2)
+plot(longEma, color=color.rgb(255, 174, 0), title="EMA 55", linewidth=2)
+plot(shortEma, color=color.rgb(0, 119, 255), title="EMA 10", linewidth=3)
+
+// Configuracion de operaciones
+allowLongs = true
+allowShorts = false
+start_date = timestamp("2024-05-15 12:00 +0000")
+end_date = timestamp("2024-12-01 12:00 +0000")
+
+// Inicializa variables para niveles de sobrecompra y sobrevendido
+float overbought_level = 90
+float oversold_level = 30
+
+// Define el periodo del estocástico
+k_period = input(14, title="K Period")
+d_period = input(3, title="D Period")
+smooth = input(3, title="Smoothing")
+
+// Verifica si el tiempo actual está dentro del rango especificado
+time_filter = (time >= start_date) and (time <= end_date)
+
+// Calcula el estocástico
+sto_k = ta.sma(ta.stoch(close, high, low, k_period), smooth)
+sto_d = ta.sma(sto_k, d_period)
+
+// Condiciones para entrar
+enterLong = ta.crossover(sto_k, sto_d) and (sto_k < oversold_level) and time_filter
+enterShort = ta.crossunder(sto_k, sto_d) and sto_k > overbought_level and time_filter
+
+// SQZMOM_LB
+length = input(20, title="BB Length")
+mult = input(2.0, title="BB MultFactor")
+lengthKC = input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+useTrueRange = input.bool(true, title="Use TrueRange (KC)")
+
+// Calculate BB
+source = close
+basis = ta.sma(source, length)
+dev = multKC * ta.stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+// Calculate KC
+ma = ta.sma(source, lengthKC)
+priceRange = useTrueRange ? ta.tr(true) : (high - low)
+rangema = ta.sma(priceRange, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+noSqz  = (sqzOn == false) and (sqzOff == false)
+
+val = ta.linreg(source  -  math.avg(math.avg(ta.highest(high, lengthKC), ta.lowest(low, lengthKC)), ta.sma(close,lengthKC)), lengthKC, 0)
+
+bcolor = (val > 0) ? ((val > nz(val[1])) ? color.lime : color.green) : ((val < nz(val[1])) ? color.red : color.maroon)
+scolor = noSqz ? color.blue : sqzOn ? color.black : color.gray 
+//plot(val, color=bcolor, style=plot.style_histogram, linewidth=4)
+//plot(0, color=scolor, style=plot.style_cross, linewidth=2)
+
+// Condiciones para salir basadas en SQZMOM_LB
+exitLong = (bcolor == color.green and nz(bcolor[1]) == color.lime) and time_filter
+exitShort = (bcolor == color.maroon and nz(bcolor[1]) == color.red) and time_filter
+
+// Visualización
+bgcolor(sto_k < oversold_level ? color.new(color.green, 90) : na)
+bgcolor(sto_k > overbought_level ? color.new(color.red, 90) : na)
+plotshape(series=enterLong, location=location.belowbar, color=color.green, style=shape.labelup, text="Buy")
+plotshape(series=enterShort, location=location.abovebar, color=color.red, style=shape.labeldown, text="Sell")
+
+// Define una variable que será true solo en 'start_date'
+start_date_highlight = (time == start_date)
+
+// Usa esa variable como condición para 'bgcolor()'
+bgcolor(start_date_highlight ? color.new(color.white, 20) : na, title="Start Date Highlight")
+
+// Función para formatear la fecha y hora
+getTimeString() =>
+    yearStr = str.tostring(year(time))
+    monthStr = str.tostring(month(time))
+    dayStr = str.tostring(dayofmonth(time))
+    hourStr = str.tostring(hour(time))
+    minuteStr = str.tostring(minute(time))
+    secondStr = str.tostring(second(time))
+    hourStr + ":" + minuteStr + ":" + secondStr + "_" + dayStr + "/" + monthStr + "/" + yearStr 
+
+// Ejecutar las órdenes de la estrategia y generar alertas
+if allowLongs and enterLong
+    strategy.entry("Long", strategy.long, qty=qty_to_buy)
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Quantity": "' + str.tostring(qty_to_buy) + '", "Entry Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Open Long", "Strategy": "Stochastic_v1"}', alert.freq_once_per_bar)
+if allowLongs and exitLong
+    strategy.close("Long")
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Exit Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Close Long", "Strategy": "Stochastic_v1"}', alert.freq_once_per_bar)
+if allowShorts and enterShort
+    strategy.entry("Short", strategy.short, qty=qty_to_buy)
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Quantity": "' + str.tostring(qty_to_buy) + '", "Entry Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "OpenShort", "Strategy": "Stochastic_v1"}', alert.freq_once_per_bar)
+if allowShorts and exitShort
+    strategy.close("Short")
+    alert('{"Ticker": "' + syminfo.ticker + '", "Temporalidad": "' + timeframe.period + '", "Exit Price Alert": "' + str.tostring(close) + '", "Time Alert": "' + getTimeString() + '", "Order": "Close Short", "Strategy": "Stochastic_v1"}', alert.freq_once_per_bar)
