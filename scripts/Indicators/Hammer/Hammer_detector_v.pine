@@ -1,0 +1,79 @@
+//@version=6
+indicator("Hammer & Inverted Hammer Detector (with ATR and Table)", overlay=true)
+
+// 🛠️ Customizable Parameters
+body_ratio = input.float(defval=0.2, title="Body proportion (0.1 to 1)", minval=0.1, maxval=1)
+lower_wick_ratio = input.float(defval=0.5, title="Lower wick proportion (0.1 to 1)", minval=0.1, maxval=1)
+upper_wick_ratio = input.float(defval=0.5, title="Upper wick proportion (0.1 to 1)", minval=0.1, maxval=1)
+small_wick_ratio = input.float(defval=0.2, title="Maximum opposite wick proportion (0.1 to 1)", minval=0.1, maxval=1)
+atr_period = input.int(defval=14, title="ATR period", minval=1, maxval=100)
+atr_multiplier = input.float(defval=1.5, title="ATR multiplier for relevance", minval=0.1, maxval=10)
+
+// 📊 Price variables
+openPrice = open
+closePrice = close
+highPrice = high
+lowPrice = low
+
+// 📐 Calculation of candle sizes
+bodySize = math.abs(closePrice - openPrice)          // Size of the candle body
+totalRange = highPrice - lowPrice                    // Total range of the candle
+upperWick = highPrice - math.max(openPrice, closePrice) // Upper wick size
+lowerWick = math.min(openPrice, closePrice) - lowPrice  // Lower wick size
+
+// 🔥 Calculate ATR to determine the average volatility
+atrValue = ta.atr(atr_period) // ATR calculated with the user-defined period
+atrAverage = ta.sma(atrValue, atr_period) // Simple moving average of the ATR
+
+// ⚡️ Normalize the ATR to the price scale
+normalizedATR = atrValue + low 
+normalizedATRAverage = atrAverage + low 
+
+// ⚡️ Determine if the candle is relevant
+isRelevant = totalRange > (atrValue * atr_multiplier)  // The candle must have a size larger than the ATR * multiplier
+
+// 📘 Condition for Hammer
+isHammer = (bodySize > (totalRange * body_ratio)) and           
+           (lowerWick > (totalRange * lower_wick_ratio)) and    
+           (upperWick < (totalRange * small_wick_ratio)) and    
+           isRelevant 
+
+// 📘 Condition for Inverted Hammer
+isInvertedHammer = (bodySize > (totalRange * body_ratio)) and   
+                   (upperWick > (totalRange * upper_wick_ratio)) and 
+                   (lowerWick < (totalRange * small_wick_ratio)) and 
+                   isRelevant 
+
+// 🔍 Display icons on the chart
+plotshape(isHammer, title="Hammer", location=location.belowbar, color=color.green, style=shape.labelup, text="🔨")
+plotshape(isInvertedHammer, title="Inverted Hammer", location=location.abovebar, color=color.red, style=shape.labeldown, text="🔼")
+
+// 📈 Plot ATR and ATR average on the main chart
+plot(normalizedATR, title="ATR", color=color.blue, linewidth=2)
+plot(normalizedATRAverage, title="ATR Average", color=color.orange, linewidth=2)
+fill(plot(normalizedATR), plot(normalizedATRAverage), color=color.new(color.blue, 80)) 
+
+// 📋 🧮 Count of Hammers and Inverted Hammers
+var int hammerCount = 0 // Counter for Hammers
+var int invertedHammerCount = 0 // Counter for Inverted Hammers
+
+// Increment the counters if a Hammer or Inverted Hammer is detected
+if isHammer
+    hammerCount += 1
+if isInvertedHammer
+    invertedHammerCount += 1
+
+// === 📋 Counting table in the bottom-right corner ===
+var table hammerTable = table.new(position.bottom_right, 3, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// 📋 Table headers
+table.cell(hammerTable, 0, 0, "🟢 Type", text_color=color.white, bgcolor=color.blue)
+table.cell(hammerTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+
+// 📋 Names of the patterns
+table.cell(hammerTable, 1, 0, "Hammer", text_color=color.green)
+table.cell(hammerTable, 2, 0, "Inverted Hammer", text_color=color.red)
+
+// 📋 Count of each pattern
+table.cell(hammerTable, 1, 1, str.tostring(hammerCount), text_color=color.white)
+table.cell(hammerTable, 2, 1, str.tostring(invertedHammerCount), text_color=color.white)
