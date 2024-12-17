@@ -1,0 +1,49 @@
+//@version=6
+indicator("Pivot Points High & Low", overlay = true)
+
+int legsInput = input(10)
+
+// Define the `pivotPoint` UDT containing the time and price of pivots.
+type pivotPoint
+    int openTime
+    float level
+
+// Create an empty `pivotPoint` array for High and Low pivots
+var pivotHighArray = array.new<pivotPoint>()
+var pivotLowArray = array.new<pivotPoint>()
+
+// Detect new pivots (`na` is returned when no pivot is found)
+pivotHighPrice = ta.pivothigh(legsInput, legsInput)
+pivotLowPrice = ta.pivotlow(legsInput, legsInput)
+
+// Add a new `pivotPoint` object to the end of the array for each detected pivot
+if bar_index > legsInput and not na(pivotHighPrice) // Asegurar que la barra actual permite acceder a time[legsInput]
+    newPivotHigh = pivotPoint.new(time[legsInput], pivotHighPrice) // Crear pivote alto correctamente
+    array.push(pivotHighArray, newPivotHigh) // Agregar el nuevo pivote alto
+
+if bar_index > legsInput and not na(pivotLowPrice) // Asegurar que la barra actual permite acceder a time[legsInput]
+    newPivotLow = pivotPoint.new(time[legsInput], pivotLowPrice) // Crear pivote bajo correctamente
+    array.push(pivotLowArray, newPivotLow) // Agregar el nuevo pivote bajo
+
+// On the last historical bar, draw pivot labels and connecting lines
+if barstate.islastconfirmedhistory
+    // 🟢 Pinescript max number labels and lines is 50.
+    int maxPivots = 25  // Limit of pivots to show
+
+    // 🟢 Draw High Pivot Points
+    var pivotPoint previousHighPoint = na
+    for i = math.max(0, array.size(pivotHighArray) - maxPivots) to array.size(pivotHighArray) - 1
+        eachPivot = array.get(pivotHighArray, i)
+        label.new(eachPivot.openTime, eachPivot.level, str.tostring(eachPivot.level, format.mintick), xloc=xloc.bar_time, yloc=yloc.abovebar, textcolor=color.white, style=label.style_label_center, size=size.small)
+        if not na(previousHighPoint)
+            line.new(previousHighPoint.openTime, previousHighPoint.level, eachPivot.openTime, eachPivot.level, xloc=xloc.bar_time, color=color.blue, width=2)
+        previousHighPoint := eachPivot
+
+    // 🔴 Draw Low Pivot Points
+    var pivotPoint previousLowPoint = na
+    for i = math.max(0, array.size(pivotLowArray) - maxPivots) to array.size(pivotLowArray) - 1
+        eachPivot = array.get(pivotLowArray, i)
+        label.new(eachPivot.openTime, eachPivot.level, str.tostring(eachPivot.level, format.mintick), xloc=xloc.bar_time, yloc=yloc.belowbar, textcolor=color.white, style=label.style_label_center, size=size.small)
+        if not na(previousLowPoint)
+            line.new(previousLowPoint.openTime, previousLowPoint.level, eachPivot.openTime, eachPivot.level, xloc=xloc.bar_time, color=color.red, width=2)
+        previousLowPoint := eachPivot
