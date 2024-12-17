@@ -1,0 +1,70 @@
+//@version=6
+indicator("Bullish & Bearish Engulfing with Volume & Trend Filter", overlay=true)
+
+// 📥 Entrada de usuario para definir cuántas velas usar para la tendencia previa
+trend_lookback = input.int(3, "Velas para la tendencia previa", minval=1, maxval=10)
+
+// 🔥 Función para detectar si hay una tendencia bajista previa
+f_prev_downtrend(lookback) =>
+    is_downtrend = true
+    for i = 1 to lookback
+        if close[i] >= close[i+1]  // La vela actual debe cerrar más bajo que la vela anterior
+            is_downtrend := false
+    is_downtrend
+
+// 🔥 Función para detectar si hay una tendencia alcista previa
+f_prev_uptrend(lookback) =>
+    is_uptrend = true
+    for i = 1 to lookback
+        if close[i] <= close[i+1]  // La vela actual debe cerrar más alto que la vela anterior
+            is_uptrend := false
+    is_uptrend
+
+// 🔥 Condiciones para detectar Bullish Engulfing
+bullishEngulfing = (close > open) and (close[1] < open[1]) and (open <= close[1]) and (close >= open[1])
+
+// 🔥 Condiciones para detectar Bearish Engulfing
+bearishEngulfing = (close < open) and (close[1] > open[1]) and (open >= close[1]) and (close <= open[1])
+
+// 🔥 Criterio de volumen (el volumen actual debe ser mayor que el volumen anterior)
+volume_filter = volume > volume[1]
+
+// 🔥 Criterio de tendencia previa
+prev_downtrend = f_prev_downtrend(trend_lookback) // Debe haber una tendencia bajista antes del Bullish Engulfing
+prev_uptrend = f_prev_uptrend(trend_lookback) // Debe haber una tendencia alcista antes del Bearish Engulfing
+
+// 🛠️ Aplicar el filtro de volumen y la tendencia previa a los Engulfing
+bullishEngulfingWithVolumeAndTrend = bullishEngulfing and volume_filter and prev_downtrend
+bearishEngulfingWithVolumeAndTrend = bearishEngulfing and volume_filter and prev_uptrend
+
+// 📍 Mostrar las señales en el gráfico
+plotshape(bullishEngulfingWithVolumeAndTrend, title="Bullish Engulfing", location=location.belowbar, color=color.green, style=shape.labelup, text="BE")
+plotshape(bearishEngulfingWithVolumeAndTrend, title="Bearish Engulfing", location=location.abovebar, color=color.red, style=shape.labeldown, text="SE")
+
+// === 📋 Tabla de contadores ===
+// 1️⃣ Crear la tabla en la esquina inferior derecha
+var table engulfing_table = table.new(position.bottom_right, 3, 3)  // 3 filas, 3 columnas
+
+// 2️⃣ Configurar los encabezados de la tabla (se ejecuta solo en la primera barra)
+if (bar_index == 0)
+    table.cell(engulfing_table, 0, 0, "Engulfing Type", text_color=color.white, bgcolor=color.blue)
+    table.cell(engulfing_table, 0, 1, "Count", text_color=color.white, bgcolor=color.blue)
+
+// 3️⃣ Nombres de los tipos de Engulfing
+table.cell(engulfing_table, 1, 0, "Bullish Engulfing", text_color=color.green)
+table.cell(engulfing_table, 2, 0, "Bearish Engulfing", text_color=color.red)
+
+// 4️⃣ Contadores de los Engulfing
+var int count_bullish_engulfing = 0
+var int count_bearish_engulfing = 0
+
+// 5️⃣ Incrementar los contadores si se detecta el patrón con volumen y tendencia previa
+if bullishEngulfingWithVolumeAndTrend
+    count_bullish_engulfing += 1
+
+if bearishEngulfingWithVolumeAndTrend
+    count_bearish_engulfing += 1
+
+// 6️⃣ Mostrar los contadores de cada tipo de Engulfing en la tabla
+table.cell(engulfing_table, 1, 1, str.tostring(count_bullish_engulfing), text_color=color.white)
+table.cell(engulfing_table, 2, 1, str.tostring(count_bearish_engulfing), text_color=color.white)
