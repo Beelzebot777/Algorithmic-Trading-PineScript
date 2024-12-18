@@ -1,0 +1,91 @@
+//@version=6
+indicator("Morning Star & Evening Star Detector", overlay=true)
+
+// === Inputs ===
+// Input to select the icon color for Morning Star
+morningStarColor = input.color(color.green, "Morning Star Icon Color")
+// Input to select the icon color for Evening Star
+eveningStarColor = input.color(color.red, "Evening Star Icon Color")
+// Input to select the background color for Morning Star
+morningStarBgColor = input.color(color.green, "Morning Star Background Color")
+// Input to select the background color for Evening Star
+eveningStarBgColor = input.color(color.red, "Evening Star Background Color")
+// Input to select the background transparency (0-100)
+bgTransparency = input.int(85, "Background Transparency (0-100)", minval=0, maxval=100)
+
+// === Morning Star Detection Rules ===
+// Condition for a large bearish candle (first candle of Morning Star pattern)
+bigBearish = close[2] < open[2] and (open[2] - close[2]) > (high[2] - low[2]) * 0.5 
+// Condition for a small candle (second candle of Morning Star pattern)
+smallCandle = math.abs(open[1] - close[1]) < (high[1] - low[1]) * 0.3
+// Condition for a large bullish candle (third candle of Morning Star pattern)
+bigBullish = close > open and (close - open) > (high - low) * 0.5 
+// Rule to detect the Morning Star pattern
+morningStar = bigBearish and smallCandle and bigBullish
+
+// === Evening Star Detection Rules ===
+// Condition for a large bullish candle (first candle of Evening Star pattern)
+bigBullish2 = close[2] > open[2] and (close[2] - open[2]) > (high[2] - low[2]) * 0.5 
+// Condition for a small candle (second candle of Evening Star pattern)
+smallCandle2 = math.abs(open[1] - close[1]) < (high[1] - low[1]) * 0.3
+// Condition for a large bearish candle (third candle of Evening Star pattern)
+bigBearish2 = close < open and (open - close) > (high - low) * 0.5 
+// Rule to detect the Evening Star pattern
+eveningStar = bigBullish2 and smallCandle2 and bigBearish2
+
+// === Display icons on the chart ===
+// Display Morning Star icon below the bar when the pattern is detected
+plotshape(series=morningStar, location=location.belowbar, color=morningStarColor, style=shape.labelup, text="☀️", textcolor=color.white)
+// Display Evening Star icon above the bar when the pattern is detected
+plotshape(series=eveningStar, location=location.abovebar, color=eveningStarColor, style=shape.labeldown, text="🌙", textcolor=color.white)
+
+// === Color the background of the 3 candles ===
+// Color the background of the first candle of the Morning Star pattern
+bgcolor(morningStar[0] ? color.new(morningStarBgColor, bgTransparency) : na, offset=-2)
+// Color the background of the second candle of the Morning Star pattern
+bgcolor(morningStar[1] ? color.new(morningStarBgColor, bgTransparency) : na, offset=-1)
+// Color the background of the third candle of the Morning Star pattern
+bgcolor(morningStar ? color.new(morningStarBgColor, bgTransparency) : na)
+
+// Color the background of the first candle of the Evening Star pattern
+bgcolor(eveningStar[0] ? color.new(eveningStarBgColor, bgTransparency) : na, offset=-2)
+// Color the background of the second candle of the Evening Star pattern
+bgcolor(eveningStar[1] ? color.new(eveningStarBgColor, bgTransparency) : na, offset=-1)
+// Color the background of the third candle of the Evening Star pattern
+bgcolor(eveningStar ? color.new(eveningStarBgColor, bgTransparency) : na)
+
+// === Counters for Morning Star and Evening Star ===
+// Variable to count the number of Morning Star patterns detected
+var int morningStarCount = 0
+// Variable to count the number of Evening Star patterns detected
+var int eveningStarCount = 0
+
+// Increment Morning Star counter when a Morning Star pattern is detected
+if morningStar
+    morningStarCount += 1
+
+// Increment Evening Star counter when an Evening Star pattern is detected
+if eveningStar
+    eveningStarCount += 1
+
+// === Table to display the counters ===
+// Create a table at the bottom-right corner to display pattern counts
+var table starTable = table.new(position.bottom_right, 3, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// Table header for the first row
+// "Type" column header
+table.cell(starTable, 0, 0, "🔷 Type", text_color=color.white, bgcolor=color.blue)
+// "Count" column header
+table.cell(starTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+
+// Names of the patterns
+// Row for Morning Star pattern name
+table.cell(starTable, 1, 0, "Morning Star", text_color=color.green)
+// Row for Evening Star pattern name
+table.cell(starTable, 2, 0, "Evening Star", text_color=color.red)
+
+// Counters of the patterns
+// Display the counter for the Morning Star pattern
+table.cell(starTable, 1, 1, str.tostring(morningStarCount), text_color=color.white)
+// Display the counter for the Evening Star pattern
+table.cell(starTable, 2, 1, str.tostring(eveningStarCount), text_color=color.white)
