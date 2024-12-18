@@ -1,0 +1,53 @@
+//@version=6
+indicator("Shooting Star Detector (Corrected Shadows)", overlay=true)
+
+// 🔥 Input: Number of candles for previous trend
+trendLength = input.int(1, "Number of candles for previous trend", minval=1, maxval=10)
+
+// 1️⃣ Check if candle is bullish or bearish
+is_bullish = close > open
+is_bearish = close < open
+
+// 2️⃣ Calculate body and shadows
+candle_body = math.abs(close - open) // Candle body size
+upper_shadow = high - math.max(open, close) // Upper shadow size
+lower_shadow = math.min(open, close) - low // Lower shadow size
+
+// 3️⃣ Shooting Star conditions
+is_small_body = candle_body < (high - low) * 0.4 // Body < 40% of total range
+is_large_upper_shadow = upper_shadow > (candle_body * 1) // Upper shadow >= body
+is_small_lower_shadow = lower_shadow < (candle_body * 0.2) // Lower shadow < 20% of body
+is_shooting_star = is_small_body and is_large_upper_shadow and is_small_lower_shadow
+
+// 4️⃣ Detect uptrend: Validate previous bullish candles
+is_uptrend = true
+for i = 1 to trendLength
+    if close[i] <= open[i]
+        is_uptrend := false
+
+// 4.2 Validate higher highs in previous trend
+for i = 1 to trendLength - 1
+    if high[i] <= high[i + 1]
+        is_uptrend := false
+
+// 5️⃣ Confirm reversal: Next candle closes below the Shooting Star's low
+is_confirmation = close[1] < low
+
+// 6️⃣ Combine all conditions for a valid Shooting Star
+is_valid_shooting_star = is_shooting_star and is_uptrend and is_confirmation
+
+// 7️⃣ Plot signal on chart
+plotshape(is_valid_shooting_star, title="Shooting Star", location=location.abovebar, color=color.red, style=shape.labelup, text="SS")
+
+// 📋 Count detected Shooting Stars
+var int shootingStarCount = 0
+if is_valid_shooting_star
+    shootingStarCount += 1
+
+// 🧮 Table to display the count of Shooting Stars
+var table shootingStarTable = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+if bar_index == 0
+    table.cell(shootingStarTable, 0, 0, "📘 Pattern", text_color=color.white, bgcolor=color.blue)
+    table.cell(shootingStarTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+table.cell(shootingStarTable, 1, 0, "Shooting Star", text_color=color.red)
+table.cell(shootingStarTable, 1, 1, str.tostring(shootingStarCount), text_color=color.white)
