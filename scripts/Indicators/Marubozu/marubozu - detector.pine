@@ -1,0 +1,25 @@
+//@version=6
+indicator("Marubozu Detector", overlay=true)
+
+// **Input del usuario**
+percentage_no_wick = input.float(5, "Wick Tolerance (%)", minval=0, maxval=100)
+
+// **Cálculo del rango de la vela**
+totalCandle = math.abs(high - low)          // Tamaño total de la vela (de Low a High)
+body = math.abs(open - close)              // Tamaño del cuerpo de la vela (diferencia entre Open y Close)
+
+// **Cálculo de las mechas**
+shadowA = high - math.max(open, close)     // Mecha superior (High - máximo de Open y Close)
+shadowB = math.min(open, close) - low      // Mecha inferior (mínimo de Open y Close - Low)
+
+// **Cálculo del tamaño relativo de las mechas**
+shadowApercent = (shadowA * 100) / totalCandle  // Porcentaje de la mecha superior en relación a la vela total
+shadowBpercent = (shadowB * 100) / totalCandle  // Porcentaje de la mecha inferior en relación a la vela total
+
+// **Detección del Marubozu**
+marubozuBullish = open < close and shadowApercent <= percentage_no_wick and shadowBpercent <= percentage_no_wick
+marubozuBearish = open > close and shadowApercent <= percentage_no_wick and shadowBpercent <= percentage_no_wick
+
+// **Visualización en el gráfico**
+plotshape(series=marubozuBullish, location=location.belowbar, color=color.green, style=shape.labelup, text="M", textcolor=color.white, size=size.small)
+plotshape(series=marubozuBearish, location=location.abovebar, color=color.red, style=shape.labeldown, text="M", textcolor=color.white, size=size.small)
