@@ -1,0 +1,19 @@
+//@version=6
+indicator("Piercing Line & Dark Cloud Cover Detector", overlay=true)
+
+darkCloudCoverCandlesDirection = open[2] < close[2] and open[1] > close[1] and open > close
+darkCloudCoverCandlesSizes = close < low[2] and open[2] < close[1]
+darkCloudCoverFullVerification = darkCloudCoverCandlesDirection and darkCloudCoverCandlesSizes
+
+piercingCandleDirection = open[2] > close[2] and open[1] < close[1] and open < close
+piercingCandlesSizes = close > low[2] and open[2] > close[1]
+piercingFullVerification = piercingCandleDirection and piercingCandlesSizes
+
+
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, text="C", textcolor=color.white, size=size.small)
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-1, text="C", textcolor=color.white, size=size.small)
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-2, text="D", textcolor=color.white, size=size.small)
+
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, text="N", textcolor=color.white, size=size.small)
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-1, text="C", textcolor=color.white, size=size.small)
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-2, text="P", textcolor=color.white, size=size.small)
