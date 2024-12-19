@@ -1,7 +1,7 @@
 # **Crypto Harami Pattern Detector Documentation**
 
 ## **Overview**
-The **Crypto Harami Pattern Detector** is a **Pine Script™ v6** indicator designed to identify and visualize the **Bullish Harami** and **Bearish Harami** candlestick patterns, which are key reversal signals in trading. This script highlights these patterns visually on the chart and features a **counting table** in the bottom-right corner that tracks the total number of detected patterns.
+The **Harami Pattern Detector** is a **Pine Script™ v6** indicator designed to identify and visualize the **Bullish Harami** and **Bearish Harami** candlestick patterns, which are key reversal signals in trading. This script highlights these patterns visually on the chart and features a **counting table** in the bottom-right corner that tracks the total number of detected patterns.
 
 This indicator is ideal for traders aiming to identify potential trend reversal points in both **bullish** and **bearish** market conditions.
 

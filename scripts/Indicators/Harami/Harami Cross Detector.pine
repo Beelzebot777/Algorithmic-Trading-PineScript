@@ -1,0 +1,66 @@
+//@version=6
+indicator("Crypto Harami Pattern Detector", overlay=true)
+
+// 🔥 1️⃣ Detectar el patrón de Bullish Harami
+bullishHarami = (open[2] > close[2] and close[1] > open[1] and close > open) and open[2] > close[1] and high[1] < open[2]
+bullishHaramiCross = bullishHarami and math.abs(open[1] - close[1]) < (high[1] - low[1]) * 0.1
+
+// 🔥 2️⃣ Detectar el patrón de Bearish Harami
+bearishHarami = (open[2] < close[2] and open[1] > close[1] and open > close) and open[2] < close[1] and high[1] > open[2]
+bearishHaramiCross = bearishHarami and math.abs(open[1] - close[1]) < (high[1] - low[1]) * 0.1
+
+// 🔥 3️⃣ Mostrar el patrón Bullish Harami
+plotshape(series=bullishHarami and not bullishHaramiCross, location=location.belowbar, color=color.green, size=size.small, style=shape.triangleup, title="Bullish Harami Confirmation")
+plotshape(series=bullishHaramiCross, location=location.belowbar, color=color.blue, size=size.small, style=shape.triangleup, title="Bullish Harami Cross Confirmation")
+
+plotshape(series=bullishHarami, location=location.belowbar, color=color.green, size=size.small, style=shape.triangleup, offset=-1, title="Bullish Harami Candle")
+plotshape(series=bullishHarami, location=location.belowbar, color=color.green, size=size.small, style=shape.triangleup, offset=-2, title="Bullish Harami Intro")
+
+// 🔥 4️⃣ Mostrar el patrón Bearish Harami
+plotshape(series=bearishHarami and not bearishHaramiCross, location=location.abovebar, color=color.red, size=size.small, style=shape.triangledown, title="Bearish Harami Confirmation")
+plotshape(series=bearishHaramiCross, location=location.abovebar, color=color.blue, size=size.small, style=shape.triangledown, title="Bearish Harami Cross Confirmation")
+
+plotshape(series=bearishHarami, location=location.abovebar, color=color.red, size=size.small, style=shape.triangledown, offset=-1, title="Bearish Harami Candle")
+plotshape(series=bearishHarami, location=location.abovebar, color=color.red, size=size.small, style=shape.triangledown, offset=-2, title="Bearish Harami Intro")
+
+// 🧮 5️⃣ Contar los patrones detectados
+var int bullishHaramiCount = 0
+var int bearishHaramiCount = 0
+var int bullishHaramiCrossCount = 0
+var int bearishHaramiCrossCount = 0
+
+if bullishHarami and not bullishHaramiCross
+    bullishHaramiCount += 1
+
+if bullishHaramiCross
+    bullishHaramiCrossCount += 1
+
+if bearishHarami and not bearishHaramiCross
+    bearishHaramiCount += 1
+
+if bearishHaramiCross
+    bearishHaramiCrossCount += 1
+
+// 📋 6️⃣ Crear la tabla en la esquina inferior derecha
+var table haramiTable = table.new(position.bottom_right, 5, 3, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// 📝 7️⃣ Definir los encabezados de la tabla
+if bar_index == 0
+    table.cell(haramiTable, 0, 0, "📘 Pattern", text_color=color.white, bgcolor=color.blue)
+    table.cell(haramiTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+
+// 📝 8️⃣ Mostrar la cantidad de Bullish Harami detectados
+table.cell(haramiTable, 1, 0, "Bullish Harami", text_color=color.green)
+table.cell(haramiTable, 1, 1, str.tostring(bullishHaramiCount), text_color=color.white)
+
+// 📝 9️⃣ Mostrar la cantidad de Bullish Harami Cross detectados
+table.cell(haramiTable, 2, 0, "Bullish Harami Cross", text_color=color.blue)
+table.cell(haramiTable, 2, 1, str.tostring(bullishHaramiCrossCount), text_color=color.white)
+
+// 📝 🔟 Mostrar la cantidad de Bearish Harami detectados
+table.cell(haramiTable, 3, 0, "Bearish Harami", text_color=color.red)
+table.cell(haramiTable, 3, 1, str.tostring(bearishHaramiCount), text_color=color.white)
+
+// 📝 1️⃣1️⃣ Mostrar la cantidad de Bearish Harami Cross detectados
+table.cell(haramiTable, 4, 0, "Bearish Harami Cross", text_color=color.blue)
+table.cell(haramiTable, 4, 1, str.tostring(bearishHaramiCrossCount), text_color=color.white)
