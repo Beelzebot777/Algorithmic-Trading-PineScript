@@ -1,0 +1,140 @@
+//@version=6
+indicator("Trend Surfer (Full Configurable)", overlay=true)
+
+// -----------------------------------------------------------------------------
+// ---------------------------- INPUT PARAMETERS -------------------------------
+// -----------------------------------------------------------------------------
+
+// General Settings
+selectedTimeframe = input.string("60", title="Select Timeframe Trend", options=["60", "240", "D", "W", "M"], group="General Settings")
+
+// EMA Settings
+emaShortPeriod = input.int(10, title="🔸Short EMA Period", minval=1, group="EMA Settings")
+emaLongPeriod = input.int(55, title="🔹Long EMA Period", minval=1, group="EMA Settings")
+
+// RSI Settings
+rsiPeriod = input.int(14, title="RSI Period (Current Interval)", minval=1, group="RSI Settings")
+overboughtLevel = input.int(67, title="🔹Overbought Level", minval=50, maxval=100, group="RSI Settings")
+oversoldLevel = input.int(33, title="🔸Oversold Level", minval=0, maxval=50, group="RSI Settings")
+
+// Stochastic Settings
+stochKPeriod = input.int(14, title="Stochastic %K Period", minval=1, group="Stochastic Settings")
+stochDPeriod = input.int(3, title="Stochastic %D Smoothing", minval=1, group="Stochastic Settings")
+stochSmooth = input.int(3, title="Stochastic Smoothing", minval=1, group="Stochastic Settings")
+stochOverbought = input.int(80, title="🔹Stochastic Overbought Level", minval=50, maxval=100, group="Stochastic Settings")
+stochOversold = input.int(20, title="🔸Stochastic Oversold Level", minval=0, maxval=50, group="Stochastic Settings")
+
+
+
+// -----------------------------------------------------------------------------
+// ------------------- RSI ZONE DETECTOR CURRENT INTERVAL ----------------------
+// -----------------------------------------------------------------------------
+
+
+// Calculamos el RSI con el intervalo actual del gráfico
+rsi = ta.rsi(close, rsiPeriod)
+
+// Detectar zonas de sobrecompra y sobreventa del RSI
+rsiOverbought = rsi > overboughtLevel
+rsiOversold = rsi < oversoldLevel
+
+bgcolor(rsiOversold ? color.new(color.blue, 85) : rsiOverbought ? color.new(color.orange, 85) : na)
+
+
+// -----------------------------------------------------------------------------
+// ------------------------- REQUEST 1H DATA -----------------------------------
+// -----------------------------------------------------------------------------
+
+// Cálculo de las EMAs en el marco de 1H
+[emaShort, emaLong, bullishCross, bearishCross] = request.security(syminfo.tickerid, selectedTimeframe, [ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod), ta.crossover(ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod)), ta.crossunder(ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod))])
+
+// Plot de las EMAs (se verán con base en la lógica de 1H)
+plot(emaShort, color=color.blue, linewidth=2, title="Short EMA (1H)")
+plot(emaLong, color=color.orange, linewidth=2, title="Long EMA (1H)")
+
+// -----------------------------------------------------------------------------
+// ------------------------------ MAIN TREND -----------------------------------
+// -----------------------------------------------------------------------------
+
+// Variable persistente para la tendencia principal
+var mainTrend = "NEUTRAL"
+
+// Actualizar el valor de la tendencia principal solo si hay un cruce
+if bullishCross
+    mainTrend := "BULLISH"
+else if bearishCross
+    mainTrend := "BEARISH"
+
+// Crear la tabla solo una vez
+var table trendTable = table.new(position.bottom_right, 2, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// Crear la cabecera de la tabla (solo en la primera barra)
+if bar_index == 0
+    table.cell(trendTable, 0, 0, "🕒 Trend " + selectedTimeframe, text_color=color.white, bgcolor=color.blue)
+    table.cell(trendTable, 0, 1, "State", text_color=color.white, bgcolor=color.blue)
+
+// Colores de la tendencia (verde para bullish, rojo para bearish)
+trendColor = mainTrend == "BULLISH" ? color.green : mainTrend == "BEARISH" ? color.red : color.gray
+
+// Mostrar la tendencia actual en la tabla
+table.cell(trendTable, 1, 0, "Trend", text_color=color.white)
+table.cell(trendTable, 1, 1, mainTrend, text_color=trendColor)
+
+// -----------------------------------------------------------------------------
+// ------------------------- CROSS DETECTION -----------------------------------
+// -----------------------------------------------------------------------------
+
+// Condiciones de entrada y salida (compra o venta) basadas en 1H
+bullishCondition = bullishCross
+bearishCondition = bearishCross
+
+
+
+// Colorear la zona de fondo para indicar compra o venta
+bgcolor(bullishCondition ? color.new(color.green, 50) : bearishCondition ? color.new(color.red, 50) : na)
+
+// -----------------------------------------------------------------------------
+// -------------------------- PLOT SHAPES SOLO EN 1H ---------------------------
+// -----------------------------------------------------------------------------
+
+// Mostrar flechas de compra y venta **solo en 1H**
+isOneHourTimeFrame = timeframe.period == "60" // Verificamos si estamos en el marco de tiempo 1H
+
+plotshape(series=isOneHourTimeFrame and bullishCross, title="Buy Signal (1H only)", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
+plotshape(series=isOneHourTimeFrame and bearishCross, title="Sell Signal (1H only)", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
+
+// -----------------------------------------------------------------------------
+// ------------------------- STOCHASTIC DETECTOR -------------------------------
+// -----------------------------------------------------------------------------
+
+// Calculamos el estocástico con el marco de tiempo actual
+k = ta.sma(ta.stoch(close, high, low, stochKPeriod), stochSmooth)
+d = ta.sma(k, stochDPeriod)
+
+// Detectar zonas de sobrecompra y sobreventa del Estocástico
+stochOverboughtZone = d > stochOverbought
+stochOversoldZone = d < stochOversold
+
+// Detectar cruces de K y D
+stochBullishCross = ta.crossover(k, d) and stochOversoldZone // Cruce de K por encima de D en sobreventa
+stochBearishCross = ta.crossunder(k, d) and stochOverboughtZone // Cruce de K por debajo de D en sobrecompra
+
+
+// -----------------------------------------------------------------------------
+// ------------------------- BUY / SELL CONDITIONS------------------------------
+// -----------------------------------------------------------------------------
+
+buyConditions = stochBullishCross and rsiOversold
+sellConditions = stochBearishCross and rsiOverbought
+
+// Mostrar señales de BUY y CLOSE BUY
+plotshape(series=buyConditions and mainTrend == "BULLISH", title="Buy", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
+plotshape(series=sellConditions and mainTrend == "BULLISH", title="Close BUY", location=location.abovebar, color=color.orange, style=shape.labeldown, text="CLOSE BUY", textcolor=color.white)
+
+
+plotshape(series=sellConditions and mainTrend == "BEARISH", title="Sell", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
+plotshape(series=buyConditions and mainTrend == "BEARISH", title="Close SELL", location=location.belowbar, color=color.blue, style=shape.labelup, text="CLOSE SELL", textcolor=color.white)
+
+
+
+
