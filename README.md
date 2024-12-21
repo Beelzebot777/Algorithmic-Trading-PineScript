@@ -1,18 +1,18 @@
 # PineScript
 
-Esta categoría está dedicada al desarrollo de scripts en Pine Script para TradingView.
+This category is dedicated to developing scripts in Pine Script for TradingView.
 
-## Objetivos
-- Desarrollar estrategias de trading automatizadas.
-- Crear indicadores personalizados.
-- Integrar señales de trading con otras partes del backend.
+## Objectives
+- Develop automated trading strategies.
+- Create custom indicators.
+- Integrate trading signals with other parts of the backend.
 
 ## Roadmap
-1. [ ] Definir las métricas y objetivos de las estrategias.
-2. [ ] Implementar y probar los scripts iniciales.
-3. [ ] Documentar Condiciones de Operacion y Rentabilidad del script.
-4. [ ] Integrar las señales con la API de backend.
-5. [ ] Optimizar los scripts para un rendimiento mejorado.
+1. [ ] Define metrics and objectives for the strategies.
+2. [ ] Implement and test initial scripts.
+3. [ ] Document the operating conditions and profitability of the script.
+4. [ ] Integrate signals with the backend API.
+5. [ ] Optimize scripts for improved performance.
 
 ## Scripts
-Los scripts desarrollados se almacenarán en la carpeta `scripts` y se documentarán individualmente.
+The developed scripts will be stored in the `scripts` folder and documented individually.
