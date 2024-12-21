@@ -1,38 +1,38 @@
 //@version=6
-indicator("Three White Soldiers & Three Black Crows", overlay=true)
+indicator("Piercing Line & Dark Cloud Cover Detector", overlay=true)
 
 // === DETECCIÓN DE PATRONES ===
 
-// **Condiciones para las tres velas alcistas (Three White Soldiers)**
-threeWhiteSoldiersDirection = close > open and close[1] > open[1] and close[2] > open[2]  // Tres velas consecutivas alcistas
-threeWhiteSoldiersSize = close > high[1] and close[1] > high[2]  // Cada vela cierra por encima de la anterior
-threeWhiteSoldiersFullVerification = threeWhiteSoldiersDirection and threeWhiteSoldiersSize  // Verificación completa
+// **Condiciones para Dark Cloud Cover**
+darkCloudCoverCandlesDirection = open[2] < close[2] and open[1] > close[1] and open > close
+darkCloudCoverCandlesSizes = close < low[2] and open[2] < close[1]
+darkCloudCoverFullVerification = darkCloudCoverCandlesDirection and darkCloudCoverCandlesSizes
 
-// **Condiciones para las tres velas bajistas (Three Black Crows)**
-threeBlackCrowsDirection = close < open and close[1] < open[1] and close[2] < open[2]  // Tres velas consecutivas bajistas
-threeBlackCrowsSize = close < low[1] and close[1] < low[2]  // Cada vela cierra por debajo de la anterior
-threeBlackCrowsFullVerification = threeBlackCrowsDirection and threeBlackCrowsSize  // Verificación completa
+// **Condiciones para Piercing Line**
+piercingCandleDirection = open[2] > close[2] and open[1] < close[1] and open < close
+piercingCandlesSizes = close > low[2] and open[2] > close[1]
+piercingFullVerification = piercingCandleDirection and piercingCandlesSizes
 
 // === PLOTEO DE LAS SEÑALES ===
-plotshape(series=threeWhiteSoldiersFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, text="W", textcolor=color.white, size=size.small)
-plotshape(series=threeWhiteSoldiersFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-1, text="S", textcolor=color.white, size=size.small)
-plotshape(series=threeWhiteSoldiersFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-2, text="3", textcolor=color.white, size=size.small)
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, text="C", textcolor=color.white, size=size.small)
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-1, text="C", textcolor=color.white, size=size.small)
+plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-2, text="D", textcolor=color.white, size=size.small)
 
-plotshape(series=threeBlackCrowsFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, text="B", textcolor=color.white, size=size.small)
-plotshape(series=threeBlackCrowsFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-1, text="C", textcolor=color.white, size=size.small)
-plotshape(series=threeBlackCrowsFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-2, text="3", textcolor=color.white, size=size.small)
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, text="N", textcolor=color.white, size=size.small)
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-1, text="C", textcolor=color.white, size=size.small)
+plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-2, text="P", textcolor=color.white, size=size.small)
 
 // === CONTADORES DE PATRONES ===
-var int whiteSoldiersCount = 0  // Contador de Three White Soldiers
-var int blackCrowsCount = 0  // Contador de Three Black Crows
+var int piercingCount = 0  // Contador de Piercing Line
+var int darkCloudCount = 0  // Contador de Dark Cloud Cover
 
-// Incrementar el contador de Three White Soldiers
-if threeWhiteSoldiersFullVerification
-    whiteSoldiersCount += 1
+// Incrementar el contador de Piercing Line
+if piercingFullVerification
+    piercingCount += 1
 
-// Incrementar el contador de Three Black Crows
-if threeBlackCrowsFullVerification
-    blackCrowsCount += 1
+// Incrementar el contador de Dark Cloud Cover
+if darkCloudCoverFullVerification
+    darkCloudCount += 1
 
 // === CREACIÓN DE LA TABLA ===
 var table patternTable = table.new(position.bottom_right, 3, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
@@ -42,9 +42,9 @@ table.cell(patternTable, 0, 0, "🔷 Type", text_color=color.white, bgcolor=colo
 table.cell(patternTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
 
 // Nombres de los patrones
-table.cell(patternTable, 1, 0, "3 White Soldiers", text_color=color.green)
-table.cell(patternTable, 2, 0, "3 Black Crows", text_color=color.red)
+table.cell(patternTable, 1, 0, "Piercing Line", text_color=color.green)
+table.cell(patternTable, 2, 0, "Dark Cloud Cover", text_color=color.red)
 
 // Contadores de los patrones
-table.cell(patternTable, 1, 1, str.tostring(whiteSoldiersCount), text_color=color.white)
-table.cell(patternTable, 2, 1, str.tostring(blackCrowsCount), text_color=color.white)
+table.cell(patternTable, 1, 1, str.tostring(piercingCount), text_color=color.white)
+table.cell(patternTable, 2, 1, str.tostring(darkCloudCount), text_color=color.white)
