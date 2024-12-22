@@ -1,25 +1,53 @@
 //@version=6
-indicator("Marubozu Detector", overlay=true)
+indicator("Marubozu Detector with Table", overlay=true)
 
-// **Input del usuario**
+// **User Input**
 percentage_no_wick = input.float(5, "Wick Tolerance (%)", minval=0, maxval=100)
 
-// **Cálculo del rango de la vela**
-totalCandle = math.abs(high - low)          // Tamaño total de la vela (de Low a High)
-body = math.abs(open - close)              // Tamaño del cuerpo de la vela (diferencia entre Open y Close)
+// **Candle Range Calculation**
+totalCandle = math.abs(high - low)          // Total candle size (from Low to High)
+body = math.abs(open - close)              // Candle body size (difference between Open and Close)
 
-// **Cálculo de las mechas**
-shadowA = high - math.max(open, close)     // Mecha superior (High - máximo de Open y Close)
-shadowB = math.min(open, close) - low      // Mecha inferior (mínimo de Open y Close - Low)
+// **Shadow Calculations**
+shadowA = high - math.max(open, close)     // Upper shadow (High - max of Open and Close)
+shadowB = math.min(open, close) - low      // Lower shadow (min of Open and Close - Low)
 
-// **Cálculo del tamaño relativo de las mechas**
-shadowApercent = (shadowA * 100) / totalCandle  // Porcentaje de la mecha superior en relación a la vela total
-shadowBpercent = (shadowB * 100) / totalCandle  // Porcentaje de la mecha inferior en relación a la vela total
+// **Relative Shadow Size Calculation**
+shadowApercent = (shadowA * 100) / totalCandle  // Percentage of the upper shadow relative to total candle
+shadowBpercent = (shadowB * 100) / totalCandle  // Percentage of the lower shadow relative to total candle
 
-// **Detección del Marubozu**
+// **Marubozu Detection**
 marubozuBullish = open < close and shadowApercent <= percentage_no_wick and shadowBpercent <= percentage_no_wick
 marubozuBearish = open > close and shadowApercent <= percentage_no_wick and shadowBpercent <= percentage_no_wick
 
-// **Visualización en el gráfico**
+// **Visualization on the Chart**
 plotshape(series=marubozuBullish, location=location.belowbar, color=color.green, style=shape.labelup, text="M", textcolor=color.white, size=size.small)
 plotshape(series=marubozuBearish, location=location.abovebar, color=color.red, style=shape.labeldown, text="M", textcolor=color.white, size=size.small)
+
+// === COUNTERS FOR MARUBOZU PATTERNS ===
+var int bullishCount = 0  // Counter for Bullish Marubozu
+var int bearishCount = 0  // Counter for Bearish Marubozu
+
+// Increment the Bullish Marubozu counter
+if marubozuBullish
+    bullishCount += 1
+
+// Increment the Bearish Marubozu counter
+if marubozuBearish
+    bearishCount += 1
+
+// === TABLE CREATION ===
+var table marubozuTable = table.new(position.bottom_right, 3, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// Table headers
+if bar_index == 0
+    table.cell(marubozuTable, 0, 0, "🔷 Type", text_color=color.white, bgcolor=color.blue)
+    table.cell(marubozuTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+
+// Pattern names
+table.cell(marubozuTable, 1, 0, "Bullish Marubozu", text_color=color.green)
+table.cell(marubozuTable, 2, 0, "Bearish Marubozu", text_color=color.red)
+
+// Pattern counters
+table.cell(marubozuTable, 1, 1, str.tostring(bullishCount), text_color=color.white)
+table.cell(marubozuTable, 2, 1, str.tostring(bearishCount), text_color=color.white)
