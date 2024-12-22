@@ -1,15 +1,19 @@
 //@version=6
 indicator("Piercing Line & Dark Cloud Cover Detector", overlay=true)
 
+// === PATTERN DETECTION ===
+
+// **Conditions for Dark Cloud Cover**
 darkCloudCoverCandlesDirection = open[2] < close[2] and open[1] > close[1] and open > close
 darkCloudCoverCandlesSizes = close < low[2] and open[2] < close[1]
 darkCloudCoverFullVerification = darkCloudCoverCandlesDirection and darkCloudCoverCandlesSizes
 
+// **Conditions for Piercing Line**
 piercingCandleDirection = open[2] > close[2] and open[1] < close[1] and open < close
 piercingCandlesSizes = close > low[2] and open[2] > close[1]
 piercingFullVerification = piercingCandleDirection and piercingCandlesSizes
 
-
+// === PLOTTING SIGNALS ===
 plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, text="C", textcolor=color.white, size=size.small)
 plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-1, text="C", textcolor=color.white, size=size.small)
 plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, color=color.red, style=shape.labeldown, offset=-2, text="D", textcolor=color.white, size=size.small)
@@ -17,3 +21,30 @@ plotshape(series=darkCloudCoverFullVerification, location=location.abovebar, col
 plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, text="N", textcolor=color.white, size=size.small)
 plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-1, text="C", textcolor=color.white, size=size.small)
 plotshape(series=piercingFullVerification, location=location.belowbar, color=color.green, style=shape.labelup, offset=-2, text="P", textcolor=color.white, size=size.small)
+
+// === PATTERN COUNTERS ===
+var int piercingCount = 0  // Counter for Piercing Line
+var int darkCloudCount = 0  // Counter for Dark Cloud Cover
+
+// Increment the Piercing Line counter
+if piercingFullVerification
+    piercingCount += 1
+
+// Increment the Dark Cloud Cover counter
+if darkCloudCoverFullVerification
+    darkCloudCount += 1
+
+// === TABLE CREATION ===
+var table patternTable = table.new(position.bottom_right, 3, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// Table headers
+table.cell(patternTable, 0, 0, "🔷 Type", text_color=color.white, bgcolor=color.blue)
+table.cell(patternTable, 0, 1, "📈 Count", text_color=color.white, bgcolor=color.blue)
+
+// Pattern names
+table.cell(patternTable, 1, 0, "Piercing Line", text_color=color.green)
+table.cell(patternTable, 2, 0, "Dark Cloud Cover", text_color=color.red)
+
+// Pattern counters
+table.cell(patternTable, 1, 1, str.tostring(piercingCount), text_color=color.white)
+table.cell(patternTable, 2, 1, str.tostring(darkCloudCount), text_color=color.white)
