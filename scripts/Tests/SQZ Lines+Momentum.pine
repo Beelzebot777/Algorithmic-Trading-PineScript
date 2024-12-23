@@ -1,0 +1,53 @@
+//@version=6
+indicator("Visual SQZ with BB, KC and Momentum", shorttitle="SQZ Lines+Momentum", overlay=true)
+
+// **Inputs**
+lengthBB = input.int(20, title="BB Length")
+multBB = input.float(2.0, title="BB MultFactor")
+lengthKC = input.int(20, title="KC Length")
+multKC = input.float(1.5, title="KC MultFactor")
+useTrueRange = input.bool(true, title="Use True Range (KC)")
+
+// **Calculations**
+// Bandas de Bollinger
+source = close
+basisBB = ta.sma(source, lengthBB)  // Media móvil central
+devBB = multBB * ta.stdev(source, lengthBB)  // Desviación estándar
+upperBB = basisBB + devBB
+lowerBB = basisBB - devBB
+
+// Canales de Keltner
+basisKC = ta.sma(source, lengthKC)  // Media móvil central
+rangeKC = useTrueRange ? ta.tr : (high - low)  // Rango verdadero o rango alto-bajo
+rangemaKC = ta.sma(rangeKC, lengthKC)  // Rango promedio
+upperKC = basisKC + rangemaKC * multKC
+lowerKC = basisKC - rangemaKC * multKC
+
+// **Squeeze Conditions**
+sqzOn = (lowerBB > lowerKC) and (upperBB < upperKC)  // Squeeze Activo
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)  // Squeeze Finalizado
+
+// Momentum Calculation
+highAvg = ta.highest(high, lengthKC)  // Promedio de valores altos
+lowAvg = ta.lowest(low, lengthKC)    // Promedio de valores bajos
+midAvg = (highAvg + lowAvg + ta.sma(close, lengthKC)) / 3  // Cálculo manual del promedio
+val = ta.linreg(source - midAvg, lengthKC, 0)  // Cálculo del momentum
+
+// **Histogram Colors**
+momentumColor = val > 0 ? (val > nz(val[1]) ? color.lime : color.green): (val < nz(val[1]) ? color.red : color.maroon)  // Momentum negativo (creciendo o decreciendo)
+
+// **Plots**
+// Bandas de Bollinger
+plot(upperBB, color=sqzOn ? color.new(color.blue, 0) : color.new(color.blue, 70), linewidth=2, title="Upper BB")
+plot(lowerBB, color=sqzOn ? color.new(color.blue, 0) : color.new(color.blue, 70), linewidth=2, title="Lower BB")
+
+// Canales de Keltner
+plot(upperKC, color=color.new(color.orange, 50), linewidth=1, title="Upper KC")
+plot(lowerKC, color=color.new(color.orange, 50), linewidth=1, title="Lower KC")
+
+// Background Highlight
+bgcolor(sqzOn ? color.new(color.red, 80) : na, title="Squeeze On Background")
+bgcolor(sqzOff ? color.new(color.green, 80) : na, title="Squeeze Off Background")
+
+// Histogram
+plot(val, color=momentumColor, style=plot.style_histogram, linewidth=3, title="Momentum Histogram")
