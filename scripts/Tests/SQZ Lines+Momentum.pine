@@ -72,9 +72,7 @@ shortCondition = sqzOff and momentumColorUpper == color.new(color.green, 50)  //
 longCondition = sqzOff and momentumColorLower == color.new(color.maroon, 20)  // Momentum negativo desacelera
 
 // Señal Visual para Shorts
-if shortCondition
-    label.new(bar_index, high, text="Short", xloc=xloc.bar_index, yloc=yloc.abovebar, color=color.new(color.red, 0), style=label.style_label_down, textcolor=color.white, size=size.small)
+plotshape(series=shortCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
 
 // Señal Visual para Longs
-if longCondition
-    label.new(bar_index, low, text="Long", xloc=xloc.bar_index, yloc=yloc.belowbar, color=color.new(color.green, 0), style=label.style_label_up, textcolor=color.white, size=size.small)
+plotshape(series=longCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
