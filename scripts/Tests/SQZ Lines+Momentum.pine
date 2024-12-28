@@ -1,59 +1,80 @@
 //@version=6
-indicator("Visual SQZ with Price-Centered Histogram", shorttitle="SQZ Price-Centered", overlay=true)
+indicator("SQZ+MOM - (BUY/SELL) INDICATOR", shorttitle="SQZ Price", overlay=true)
 
-// **Inputs**
+// ---------------------------------------------------------------------------------------------------
+// -------------------------------------- **Inputs** -------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+
 lengthBB = input.int(20, title="BB Length")
 multBB = input.float(2.0, title="BB MultFactor")
 lengthKC = input.int(20, title="KC Length")
 multKC = input.float(1.5, title="KC MultFactor")
 useTrueRange = input.bool(true, title="Use True Range (KC)")
 
-// **Calculations**
-// Bandas de Bollinger
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------- **Calculations** -----------------------------------------
+// ---------------------------------------------------------------------------------------------------
+
+// --------------------------------------- Bandas de Bollinger ---------------------------------------
 source = close
 basisBB = ta.sma(source, lengthBB)
 devBB = multBB * ta.stdev(source, lengthBB)
 upperBB = basisBB + devBB
 lowerBB = basisBB - devBB
 
-// Canales de Keltner
+// --------------------------------------- Canales de Keltner ----------------------------------------
 basisKC = ta.sma(source, lengthKC)
 rangeKC = useTrueRange ? ta.tr : (high - low)
 rangemaKC = ta.sma(rangeKC, lengthKC)
 upperKC = basisKC + rangemaKC * multKC
 lowerKC = basisKC - rangemaKC * multKC
 
-// **Squeeze Conditions**
+// -------------------------------------- **Squeeze Conditions** -------------------------------------
 sqzOn = (lowerBB > lowerKC) and (upperBB < upperKC)
 sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
 
-// Momentum Calculation
+// --------------------------------------- Momentum Calculation --------------------------------------
 highAvg = ta.highest(high, lengthKC)
 lowAvg = ta.lowest(low, lengthKC)
 midAvg = (highAvg + lowAvg + ta.sma(close, lengthKC)) / 3
 val = ta.linreg(source - midAvg, lengthKC, 0)  // Momentum basado en regresión lineal
 
-// **Histogram Colors**
-momentumColor = val > 0 ? (val > nz(val[1]) ? color.lime : color.green) : (val < nz(val[1]) ? color.red : color.maroon)
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------- **Chart Render** -----------------------------------------
+// ---------------------------------------------------------------------------------------------------
 
-// **Price-Centered Histogram**
-// Calcula las barras como desviaciones alrededor del precio
+// **Histogram Colors**
+momentumColorUpper = (val > 0) ? (val > nz(val[1]) ? color.lime : color.new(color.green, 50)) : color.new(color.white, 100)  // Transparente si no es positivo
+momentumColorLower = (val < 0) ? (val < nz(val[1]) ? color.red : color.new(color.maroon,20)) : color.new(color.white, 100)  // Transparente si no es negativo
+
+// **Price-Centered Lines**
+// Calcula las líneas como desviaciones alrededor del precio
 upperHist = close + (val > 0 ? val : 0)  // Extensión positiva del histograma
 lowerHist = close - (val < 0 ? math.abs(val) : 0)  // Extensión negativa del histograma
 
-// Plots del histograma
-plot(upperHist, color=momentumColor, style=plot.style_columns, linewidth=2, title="Momentum Upper Hist")
-plot(lowerHist, color=momentumColor, style=plot.style_columns, linewidth=2, title="Momentum Lower Hist")
-
-// **Plots**
-// Bandas de Bollinger
-plot(upperBB, color=sqzOn ? color.new(color.blue, 0) : color.new(color.blue, 70), linewidth=2, title="Upper BB")
-plot(lowerBB, color=sqzOn ? color.new(color.blue, 0) : color.new(color.blue, 70), linewidth=2, title="Lower BB")
-
-// Canales de Keltner
-plot(upperKC, color=color.new(color.orange, 50), linewidth=1, title="Upper KC")
-plot(lowerKC, color=color.new(color.orange, 50), linewidth=1, title="Lower KC")
+// Plots de las líneas
+plot(upperHist, color=momentumColorUpper, style=plot.style_line, linewidth=2, title="Momentum Upper Line")
+plot(lowerHist, color=momentumColorLower, style=plot.style_line, linewidth=2, title="Momentum Lower Line")
 
 // Background Highlight
 bgcolor(sqzOn ? color.new(color.red, 80) : na, title="Squeeze On Background")
 bgcolor(sqzOff ? color.new(color.green, 80) : na, title="Squeeze Off Background")
+
+
+// ---------------------------------------------------------------------------------------------------
+// -------------------------------------- **Signal Logic** -------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+
+// Condición para abrir un Short
+shortCondition = sqzOff and momentumColorUpper == color.new(color.green, 50)  // Momentum positivo desacelera
+
+// Condición para abrir un Long
+longCondition = sqzOff and momentumColorLower == color.new(color.maroon, 20)  // Momentum negativo desacelera
+
+// Señal Visual para Shorts
+if shortCondition
+    label.new(bar_index, high, text="Short", xloc=xloc.bar_index, yloc=yloc.abovebar, color=color.new(color.red, 0), style=label.style_label_down, textcolor=color.white, size=size.small)
+
+// Señal Visual para Longs
+if longCondition
+    label.new(bar_index, low, text="Long", xloc=xloc.bar_index, yloc=yloc.belowbar, color=color.new(color.green, 0), style=label.style_label_up, textcolor=color.white, size=size.small)
