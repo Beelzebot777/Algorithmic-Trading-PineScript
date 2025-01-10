@@ -1,0 +1,173 @@
+//@version=6
+strategy("Trend Surfer Strategy (Full Configurable)",
+         overlay=true,
+         initial_capital=10000, 
+         commission_type="percent", 
+         pyramiding=20, 
+         commission_value=0.01)
+
+// Configuracion del size de compra
+currentPrice = close // El precio actual del activo
+amount_to_invest = 500
+qty_to_buy = amount_to_invest / currentPrice // Calcula la cantidad a comprar con 'amount_to_invest'
+
+
+// -----------------------------------------------------------------------------
+// ---------------------------- INPUT PARAMETERS -------------------------------
+// -----------------------------------------------------------------------------
+
+// General Settings
+selectedTimeframe = input.string("60", title="Select Timeframe Trend", options=["60", "240", "D", "W", "M"], group="General Settings")
+
+// EMA Settings
+emaShortPeriod = input.int(10, title="🔸Short EMA Period", minval=1, group="EMA Settings")
+emaLongPeriod = input.int(55, title="🔹Long EMA Period", minval=1, group="EMA Settings")
+
+// RSI Settings
+rsiPeriod = input.int(14, title="RSI Period (Current Interval)", minval=1, group="RSI Settings")
+overboughtLevel = input.int(50, title="🔹Overbought Level", minval=50, maxval=100, group="RSI Settings")
+oversoldLevel = input.int(50, title="🔸Oversold Level", minval=0, maxval=50, group="RSI Settings")
+
+// Stochastic Settings
+stochKPeriod = input.int(14, title="Stochastic %K Period", minval=1, group="Stochastic Settings")
+stochDPeriod = input.int(3, title="Stochastic %D Smoothing", minval=1, group="Stochastic Settings")
+stochSmooth = input.int(3, title="Stochastic Smoothing", minval=1, group="Stochastic Settings")
+stochOverbought = input.int(80, title="🔹Stochastic Overbought Level", minval=50, maxval=100, group="Stochastic Settings")
+stochOversold = input.int(20, title="🔸Stochastic Oversold Level", minval=0, maxval=50, group="Stochastic Settings")
+
+// Stop Loss and Take Profit Settings
+stopLossPerc = input.float(1.0, title="Stop Loss (%)", minval=0.1, group="Risk Management") // Stop Loss en porcentaje
+takeProfitPerc = input.float(2.0, title="Take Profit (%)", minval=0.1, group="Risk Management") // Take Profit en porcentaje
+
+
+// -----------------------------------------------------------------------------
+// ------------------- RSI ZONE DETECTOR CURRENT INTERVAL ----------------------
+// -----------------------------------------------------------------------------
+
+rsi = ta.rsi(close, rsiPeriod)
+rsiOverbought = rsi > overboughtLevel
+rsiOversold = rsi < oversoldLevel
+
+bgcolor(rsiOversold ? color.new(color.blue, 85) : rsiOverbought ? color.new(color.orange, 85) : na)
+
+
+// -----------------------------------------------------------------------------
+// ------------------------- REQUEST 1H DATA -----------------------------------
+// -----------------------------------------------------------------------------
+
+[emaShort, emaLong, bullishCross, bearishCross] = request.security(syminfo.tickerid, selectedTimeframe, [ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod), ta.crossover(ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod)), ta.crossunder(ta.ema(close, emaShortPeriod), ta.ema(close, emaLongPeriod))])
+
+plot(emaShort, color=color.blue, linewidth=2, title="Short EMA (Overlay)")
+plot(emaLong, color=color.orange, linewidth=2, title="Long EMA (Overlay)")
+
+// -----------------------------------------------------------------------------
+// ------------------------------ MAIN TREND -----------------------------------
+// -----------------------------------------------------------------------------
+
+var mainTrend = "NEUTRAL"
+if bullishCross
+    mainTrend := "BULLISH"
+else if bearishCross
+    mainTrend := "BEARISH"
+
+// -----------------------------------------------------------------------------
+// ------------------------------ TABLE PLOT -----------------------------------
+// -----------------------------------------------------------------------------
+
+// Crear la tabla solo una vez
+var table trendTable = table.new(position.bottom_right, 6, 2, bgcolor=color.new(color.gray, 90), frame_color=color.gray, frame_width=1)
+
+// Crear la cabecera de la tabla (solo en la primera barra)
+if bar_index == 0
+    table.cell(trendTable, 0, 0, "🕒 Trend " + selectedTimeframe, text_color=color.white, bgcolor=color.blue)
+    table.cell(trendTable, 0, 1, "State", text_color=color.white, bgcolor=color.blue)
+
+// Colores de la tendencia (verde para bullish, rojo para bearish)
+trendColor = mainTrend == "BULLISH" ? color.green : mainTrend == "BEARISH" ? color.red : color.gray
+
+// Mostrar la tendencia actual en la tabla
+table.cell(trendTable, 1, 0, "Trend", text_color=color.white, bgcolor= color.black)
+table.cell(trendTable, 1, 1, mainTrend, text_color=trendColor)
+
+table.cell(trendTable, 2, 0, "RSI OVERSOLD", text_color=color.white, bgcolor = color.gray)
+table.cell(trendTable, 2, 1, str.tostring(oversoldLevel), text_color=color.white)
+
+table.cell(trendTable, 3, 0, "RSI OVERBOUGHT", text_color=color.white, bgcolor = color.gray)
+table.cell(trendTable, 3, 1, str.tostring(overboughtLevel), text_color=color.white)
+
+table.cell(trendTable, 4, 0, "STOCKA OVERSOLD", text_color=color.white, bgcolor = color.purple)
+table.cell(trendTable, 4, 1, str.tostring(stochOversold), text_color=color.white)
+
+table.cell(trendTable, 5, 0, "STOCKA OVERBOUGHT", text_color=color.white, bgcolor = color.purple)
+table.cell(trendTable, 5, 1, str.tostring(stochOverbought), text_color=color.white)
+
+// -----------------------------------------------------------------------------
+// ------------------------- CROSS DETECTION -----------------------------------
+// -----------------------------------------------------------------------------
+
+// Condiciones de entrada y salida (compra o venta) basadas en 1H
+bullishCondition = bullishCross
+bearishCondition = bearishCross
+
+// Colorear la zona de fondo para indicar compra o venta
+bgcolor(bullishCondition ? color.new(color.green, 50) : bearishCondition ? color.new(color.red, 50) : na)
+
+// -----------------------------------------------------------------------------
+// -------------------------- PLOT SHAPES SOLO EN 1H ---------------------------
+// -----------------------------------------------------------------------------
+
+// Mostrar flechas de compra y venta **solo en 1H**
+isOneHourTimeFrame = timeframe.period == "60" // Verificamos si estamos en el marco de tiempo 1H
+
+plotshape(series=isOneHourTimeFrame and bullishCross, title="Buy Signal (1H only)", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
+plotshape(series=isOneHourTimeFrame and bearishCross, title="Sell Signal (1H only)", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
+
+
+// -----------------------------------------------------------------------------
+// ------------------------- STOCHASTIC DETECTOR -------------------------------
+// -----------------------------------------------------------------------------
+
+k = ta.sma(ta.stoch(close, high, low, stochKPeriod), stochSmooth)
+d = ta.sma(k, stochDPeriod)
+
+stochOverboughtZone = d > stochOverbought
+stochOversoldZone = d < stochOversold
+
+stochBullishCross = ta.crossover(k, d) and stochOversoldZone
+stochBearishCross = ta.crossunder(k, d) and stochOverboughtZone
+
+// -----------------------------------------------------------------------------
+// ------------------------- BUY / SELL CONDITIONS------------------------------
+// -----------------------------------------------------------------------------
+start_date = timestamp("2023-11-19 00:00 +0000")
+end_date = timestamp("2025-12-31 12:00 +0000")
+
+start_date_highlight = (time == start_date)
+bgcolor(start_date_highlight ? color.new(#ffffff, 20) : na, title="Start Date Highlight")
+
+time_filter = (time >= start_date) and (time <= end_date)
+
+buyConditions = stochBullishCross and rsiOversold and time_filter and (close > emaLong)
+sellConditions = stochBearishCross and rsiOverbought and time_filter and (close < emaLong)
+
+
+// -----------------------------------------------------------------------------
+// ----------------------- STRATEGY BUY AND SELL -------------------------------
+// -----------------------------------------------------------------------------
+
+if buyConditions and mainTrend == "BULLISH"
+    strategy.entry("Long", strategy.long, qty=qty_to_buy)
+    strategy.exit("Close Long", from_entry="Long", stop=close * (1 - stopLossPerc / 100), limit=close * (1 + takeProfitPerc / 100))
+
+if sellConditions and mainTrend == "BEARISH"
+    strategy.entry("Short", strategy.short, qty=qty_to_buy)
+    strategy.exit("Close Short", from_entry="Short", stop=close * (1 + stopLossPerc / 100), limit=close * (1 - takeProfitPerc / 100))
+// -----------------------------------------------------------------------------
+// ----------------------- PLOT BUY/SELL SIGNALS -------------------------------
+// -----------------------------------------------------------------------------
+
+//plotshape(series=buyConditions and mainTrend == "BULLISH", title="Buy", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY", textcolor=color.white)
+//plotshape(series=sellConditions and mainTrend == "BULLISH", title="Close BUY", location=location.abovebar, color=color.orange, style=shape.labeldown, text="CLOSE BUY", textcolor=color.white)
+
+//plotshape(series=sellConditions and mainTrend == "BEARISH", title="Sell", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL", textcolor=color.white)
+//plotshape(series=buyConditions and mainTrend == "BEARISH", title="Close SELL", location=location.belowbar, color=color.blue, style=shape.labelup, text="CLOSE SELL", textcolor=color.white)
